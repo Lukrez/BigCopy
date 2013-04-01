@@ -1,0 +1,7 @@
+name: BigCopy
+main: de.lukas.bigcopy.BigCopy
+version: 0.0.1
+
+commands:
+  bigcopy:
+    usage: /<bigcopy>
