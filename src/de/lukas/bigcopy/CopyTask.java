@@ -36,7 +36,7 @@ public class CopyTask extends BukkitRunnable {
 	public int delay = 20;
 	private Stopwatch swCopy;
 
-	public CopyTask(String playerName, Location pos1, Location pos2, Location cm, int delay) {
+	/*public CopyTask(String playerName, Location pos1, Location pos2, Location cm, int delay) {
 		this.world = pos1.getWorld();
 		this.delay = delay;
 		this.playerName = playerName;
@@ -86,13 +86,65 @@ public class CopyTask extends BukkitRunnable {
 		if (player != null) {
 			player.sendMessage(blocknrs + " Blöcke zum kopieren ausgewählt.");
 		}
+	}*/
+
+	public CopyTask(Project project) {
+		this.world = project.getPos1().getWorld();
+		this.delay = project.getDelay();
+		this.playerName = project.getUser();
+		this.markerX = project.getCopyMarker().getBlockX();
+		this.markerY = project.getCopyMarker().getBlockY();
+		this.markerZ = project.getCopyMarker().getBlockZ();
+		// define positions
+		if (project.getPos1().getBlockX() < project.getPos2().getBlockX()) {
+			this.X1 = project.getPos1().getBlockX();
+			this.X2 = project.getPos2().getBlockX();
+		} else {
+			this.X1 = project.getPos2().getBlockX();
+			this.X2 = project.getPos1().getBlockX();
+		}
+		if (project.getPos1().getBlockY() < project.getPos2().getBlockY()) {
+			this.Y1 = project.getPos1().getBlockY();
+			this.Y2 = project.getPos2().getBlockY();
+		} else {
+			this.Y1 = project.getPos2().getBlockY();
+			this.Y2 = project.getPos1().getBlockY();
+		}
+		if (project.getPos1().getBlockZ() < project.getPos2().getBlockZ()) {
+			this.Z1 = project.getPos1().getBlockZ();
+			this.Z2 = project.getPos2().getBlockZ();
+		} else {
+			this.Z1 = project.getPos2().getBlockZ();
+			this.Z2 = project.getPos1().getBlockZ();
+		}
+
+		// define starting point
+		this.atX = this.X1 - 1;
+		this.atY = this.Y1;
+		this.atZ = this.Z1;
+
+		this.copyFinished = false;
+		// open writer
+		try {
+			this.fw = new FileWriter("test.txt");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		this.bw = new BufferedWriter(fw);
+
+		// Calculate size
+		int blocknrs = (this.X2 - this.X1 + 1) * (this.Y2 - this.Y1 + 1) * (this.Z2 - this.Z1 + 1);
+		Player player = Bukkit.getPlayer(this.playerName);
+		if (player != null) {
+			player.sendMessage(blocknrs + " Blöcke zum kopieren ausgewählt.");
+		}
 	}
 
 	public String getStatus() {
 		// 
-		int blocknrs = (this.X2 - this.X1+1) * (this.Y2 - this.Y1+1) * (this.Z2 - this.Z1+1);
-		int at = (this.X2 - this.X1+1) * (this.Y2 - this.atY+1) * (this.Z2 - this.Z1+1);
-		at += (this.X2 - this.X1+1) * (this.Z2 - this.atZ+1);
+		int blocknrs = (this.X2 - this.X1 + 1) * (this.Y2 - this.Y1 + 1) * (this.Z2 - this.Z1 + 1);
+		int at = (this.X2 - this.X1 + 1) * (this.Y2 - this.atY + 1) * (this.Z2 - this.Z1 + 1);
+		at += (this.X2 - this.X1 + 1) * (this.Z2 - this.atZ + 1);
 		at += (this.X2 - this.atX);
 
 		return at + " Blöcke von " + blocknrs + " kopiert. Dies sind " + at / (float) blocknrs * 100 + "%";
@@ -135,7 +187,6 @@ public class CopyTask extends BukkitRunnable {
 				try {
 					this.bw.write(s);
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					this.copyFinished = true;
 					e.printStackTrace();
 				}
@@ -146,7 +197,6 @@ public class CopyTask extends BukkitRunnable {
 		try {
 			this.bw.flush();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			this.copyFinished = true;
 			e.printStackTrace();
 		}
@@ -158,7 +208,6 @@ public class CopyTask extends BukkitRunnable {
 				this.bw.close();
 				this.fw.close();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			this.swCopy.stop();

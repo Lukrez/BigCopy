@@ -1,12 +1,17 @@
 package de.lukas.bigcopy;
 
-import org.bukkit.Bukkit;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.HashMap;
+
 import org.bukkit.DyeColor;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -14,40 +19,36 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitScheduler;
-import org.bukkit.scheduler.BukkitTask;
 
 public class BigCopy extends JavaPlugin implements Listener {
 
 	private static BigCopy instance;
 
-	String playerName;
-	private Location pos1;
-	private Location pos2;
-	private Location copymarker;
-	private Location pastemarker;
-	private int taskId;
-	private CopyTask cp;
+	private HashMap<String, Project> projects;
 
-	public static int counter = 0;
-
-	private enum PositionTypes {
-		POS1, POS2, COPYMARKER, PASTEMARKER, DEFAULT
-	};
-
-	private PositionTypes ptype;
+	/* String playerName;
+	// private Location pos1;
+	// private Location pos2;
+	// private Location copymarker;
+	// private Location pastemarker;
+	// private int taskId;
+		private CopyTask cp;*/
 
 	@Override
 	public void onDisable() {
+		// TODO: Close projects savely.
+		// this.getServer().getScheduler().cancelTasks(this);
 		this.getLogger().info("v" + this.getDescription().getVersion() + " disabled.");
 	}
 
 	@Override
 	public void onEnable() {
-		this.instance = this;
-		this.playerName = "";
-		this.ptype = PositionTypes.DEFAULT;
+		BigCopy.instance = this;
+		this.projects = new HashMap<String, Project>();
 		this.getServer().getPluginManager().registerEvents(this, this);
+
+		if (!this.getDataFolder().exists())
+			this.getDataFolder().mkdir();
 
 		this.getLogger().info("v" + this.getDescription().getVersion() + " enabled.");
 	}
@@ -68,90 +69,205 @@ public class BigCopy extends JavaPlugin implements Listener {
 		if (cmd.getName().equalsIgnoreCase("bigcopy")) {
 			if (args.length == 0) {
 				player.sendMessage("---Help of BigCopy---");
-				player.sendMessage("/bigcopy login");
-				player.sendMessage("/bigcopy logout");
-				player.sendMessage("/bigcopy status");
+				player.sendMessage("/bigcopy project create <project name>");
+				player.sendMessage("/bigcopy project open <project name>");
+				player.sendMessage("/bigcopy project close");
+				player.sendMessage("/bigcopy status [project name]");
 				player.sendMessage("/bigcopy copymarker - copy marker");
 				player.sendMessage("/bigcopy pastemarker - paste marker");
 				player.sendMessage("/bigcopy pos1 - Set first position");
 				player.sendMessage("/bigcopy pos2 - Set second position");
-				player.sendMessage("/bigcopy copy <file name> - Copy blocks into file");
-				player.sendMessage("/bigcopy paste <file name> - Pastes the structure from file");
+				player.sendMessage("/bigcopy copy - Copy blocks into project folder");
+				player.sendMessage("/bigcopy paste - Pastes the structure from project folder");
 				return true;
 			}
 
-			if (args[0].equalsIgnoreCase("login")) {
-				this.playerName = player.getName();
-				player.sendMessage("You are now logged into bigcopy.");
+			if (args[0].equalsIgnoreCase("project") || args[0].equalsIgnoreCase("pj")) {
+				if (args[1].equalsIgnoreCase("create")) {
+					if (args.length == 2) {
+						player.sendMessage("Bitte Projektname angeben.");
+						return true;
+					}
+
+					String projectName = "";
+					for (int i = 2; i < args.length; i++) {
+						projectName += args[i] + " ";
+					}
+
+					Project project = new Project(projectName);
+					this.saveProject(project);
+					project.setUser(player.getName());
+					this.projects.put(player.getName(), project);
+
+					player.sendMessage("Projekt " + projectName + " wurde erstellt und geöffnet.");
+					return true;
+				}
+
+				if (args[1].equalsIgnoreCase("open")) {
+					if (args.length == 2) {
+						player.sendMessage("Bitte Projektname angeben.");
+						return true;
+					}
+
+					String projectName = "";
+					for (int i = 2; i < args.length; i++) {
+						projectName += args[i] + " ";
+					}
+
+					Project project = this.loadProject(projectName, player);
+					if (project == null)
+						return true;
+					project.setUser(player.getName());
+
+					player.sendMessage("Das Projekt ist nun offen.");
+					return true;
+				}
+
+			}
+
+			if (args[0].equalsIgnoreCase("close")) {
+
+				Project project = this.projects.get(player.getName());
+				if (project != null) {
+					this.saveProject(project);
+					this.projects.remove(player.getName());
+					player.sendMessage("Das Project wurde geschlossen.");
+				}
 				return true;
 			}
 
-			if (args[0].equalsIgnoreCase("logout")) {
-				this.playerName = "";
-				player.sendMessage("Du bist nun ausgeloggt.");
-				return true;
-			}
-			
 			if (args[0].equalsIgnoreCase("status")) {
-				if (this.cp != null)
-					player.sendMessage(this.cp.getStatus());
+				String projectName = "";
+				for (int i = 1; i < args.length; i++) {
+					projectName += args[i] + " ";
+				}
+				for (Project project : this.projects.values()) {
+					if (project.getProjectName().equalsIgnoreCase(projectName)) {
+						player.sendMessage(project.getStatus());
+						return true;
+					}
+				}
+				player.sendMessage(this.projects.get(player.getName()).getStatus());
 				return true;
 			}
 
-			if (!this.playerName.equalsIgnoreCase(player.getName())) {
-				player.sendMessage("Bitte einloggen: /bigcopy login");
+			Project project = this.projects.get(player.getName());
+			if (project == null) {
+				player.sendMessage("Du hast keine BigCopy Projekte offen.");
 				return true;
 			}
 
 			if (args[0].equalsIgnoreCase("copymarker")) {
-				this.ptype = PositionTypes.COPYMARKER;
+				project.setSelectedPositionType(PositionType.COPYMARKER);
 				player.sendMessage("Bitte copymarker auswählen.");
 				return true;
 			}
 
 			if (args[0].equalsIgnoreCase("pastemarker")) {
-				this.ptype = PositionTypes.PASTEMARKER;
+				project.setSelectedPositionType(PositionType.PASTEMARKER);
 				player.sendMessage("Bitte pastemarker auswählen.");
 				return true;
 			}
 
 			if (args[0].equalsIgnoreCase("pos1")) {
-				this.ptype = PositionTypes.POS1;
+				project.setSelectedPositionType(PositionType.POS1);
 				player.sendMessage("Bitte pos1 auswählen.");
 				return true;
 			}
 
 			if (args[0].equalsIgnoreCase("pos2")) {
-				this.ptype = PositionTypes.POS2;
+				project.setSelectedPositionType(PositionType.POS2);
 				player.sendMessage("Bitte pos2 auswählen.");
 				return true;
 			}
 
 			if (args[0].equalsIgnoreCase("copy")) {
-				// check locations
-				if (pos1 == null || pos2 == null || copymarker == null){
-					player.sendMessage("eine oder mehrere Locations sind nicht gesetzt.");
+				// check validity of config
+				if (project.getPos1() == null || project.getPos2() == null || project.getCopyMarker() == null) {
+					player.sendMessage("Eine oder mehrere Locations sind nicht gesetzt.");
 					return true;
 				}
-				if (!pos1.getWorld().equals(pos2.getWorld()) || !pos1.getWorld().equals(copymarker.getWorld())){
-					player.sendMessage("eine oder mehrere Locations sind in der falschen Welt.");
+				if (!project.getPos1().getWorld().equals(project.getPos2().getWorld()) || !project.getPos1().getWorld().equals(project.getCopyMarker().getWorld())) {
+					player.sendMessage("Eine oder mehrere Locations sind in der falschen Welt.");
 					return true;
 				}
-				this.cp = new CopyTask(playerName, pos1, pos2, copymarker, 5);
-			
-				Bukkit.getScheduler().scheduleSyncDelayedTask(this, this.cp, 60);
+
+				project.startCopyTask();
 				player.sendMessage("Kopiervorgang gestartet.");
 				return true;
 			}
 
 			if (args[0].equalsIgnoreCase("stop")) {
-				this.getServer().getScheduler().cancelTask(this.taskId);
-				player.sendMessage("Task wurde gekillt.");
+				if (project.getCopyTask() == null) {
+					player.sendMessage("In diesem Projekt läuft gerade kein Kopiervorgang.");
+					return true;
+				}
+				project.stopCopyTask();
+				player.sendMessage("Kopiervorgang wurde gestoppt.");
 				return true;
 			}
 		}
 
 		return false;
+	}
+
+	public void saveProject(Project project) {
+
+	}
+
+	public Project loadProject(String projectName, Player player) {
+		for (Project project : this.projects.values()) {
+			if (project.getProjectName().equalsIgnoreCase(projectName)) {
+				player.sendMessage("Der User " + project.getUser() + " hat das Projekt schon geöffnet.");
+				return null;
+			}
+		}
+
+		File fileProject = new File(this.getDataFolder() + File.separator + projectName);
+		if (!fileProject.exists()) {
+			player.sendMessage("Das Projekt " + projectName + " existiert nicht.");
+			return null;
+		}
+
+		File fileProjectConfig = new File(this.getDataFolder() + File.separator + projectName, "project.yml");
+		if (!fileProjectConfig.exists()) {
+			player.sendMessage("Das Projekt " + projectName + " existiert nicht.");
+			return null;
+		}
+
+		YamlConfiguration yamlProjectConfig = new YamlConfiguration();
+		try {
+			yamlProjectConfig.load(fileProjectConfig);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidConfigurationException e) {
+			e.printStackTrace();
+		}
+
+		Project project = new Project(projectName);
+
+		if (yamlProjectConfig.contains("pos1")) {
+			project.setPos1(LocationParser.parseStringToLocation(yamlProjectConfig.getString("pos1")));
+		}
+		if (yamlProjectConfig.contains("pos2")) {
+			project.setPos2(LocationParser.parseStringToLocation(yamlProjectConfig.getString("pos2")));
+		}
+		if (yamlProjectConfig.contains("copymarker")) {
+			project.setCopyMarker(LocationParser.parseStringToLocation(yamlProjectConfig.getString("copymarker")));
+		}
+
+		if (yamlProjectConfig.contains("pastemarker")) {
+			project.setPasteMarker(LocationParser.parseStringToLocation(yamlProjectConfig.getString("pastemarker")));
+		}
+
+		// delay
+		if (yamlProjectConfig.contains("delay")) {
+			project.setDelay(Integer.parseInt(yamlProjectConfig.getString("delay")));
+		}
+		project.setUser(player.getName());
+		return project;
 	}
 
 	@EventHandler
@@ -161,59 +277,61 @@ public class BigCopy extends JavaPlugin implements Listener {
 		Action action = event.getAction();
 		ItemStack item = player.getItemInHand();
 
-		if (this.ptype != PositionTypes.DEFAULT && this.playerName.equalsIgnoreCase(player.getName()) && item != null && item.getType() == Material.GOLD_AXE) {
+		Project project = this.projects.get(player.getName());
+
+		if (project != null && project.getSelectedPositionType() != PositionType.DEFAULT && project.getUser().equalsIgnoreCase(player.getName()) && item != null && item.getType() == Material.GOLD_AXE) {
 			if (action == Action.RIGHT_CLICK_BLOCK) {
-				if (this.ptype == PositionTypes.POS1) {
-					this.pos1 = b.getLocation();
+				if (project.getSelectedPositionType() == PositionType.POS1) {
+					project.setPos1(b.getLocation());
 					b.setType(Material.WOOL);
 					b.setData(DyeColor.RED.getWoolData());
 				}
 
-				if (this.ptype == PositionTypes.POS2) {
-					this.pos2 = b.getLocation();
+				if (project.getSelectedPositionType() == PositionType.POS2) {
+					project.setPos2(b.getLocation());
 					b.setType(Material.WOOL);
 					b.setData(DyeColor.GREEN.getWoolData());
 				}
 
-				if (this.ptype == PositionTypes.COPYMARKER) {
+				if (project.getSelectedPositionType() == PositionType.COPYMARKER) {
+					project.setCopyMarker(b.getLocation());
 					b.setType(Material.WOOL);
 					b.setData(DyeColor.YELLOW.getWoolData());
-					this.copymarker = b.getLocation();
 				}
 
-				if (this.ptype == PositionTypes.PASTEMARKER) {
+				if (project.getSelectedPositionType() == PositionType.PASTEMARKER) {
+					project.setPasteMarker(b.getLocation());
 					b.setType(Material.WOOL);
 					b.setData(DyeColor.ORANGE.getWoolData());
-					this.pastemarker = b.getLocation();
 				}
 			} else if (action == Action.RIGHT_CLICK_AIR) {
-				if (this.ptype == PositionTypes.POS1) {
-					this.pos1 = player.getLocation();
+				if (project.getSelectedPositionType() == PositionType.POS1) {
+					project.setPos1(b.getLocation());
 					player.getLocation().getBlock().setType(Material.WOOL);
 					player.getLocation().getBlock().setData(DyeColor.RED.getWoolData());
 				}
 
-				if (this.ptype == PositionTypes.POS2) {
-					this.pos2 = player.getLocation();
+				if (project.getSelectedPositionType() == PositionType.POS2) {
+					project.setPos2(b.getLocation());
 					player.getLocation().getBlock().setType(Material.WOOL);
 					player.getLocation().getBlock().setData(DyeColor.GREEN.getWoolData());
 				}
 
-				if (this.ptype == PositionTypes.COPYMARKER) {
+				if (project.getSelectedPositionType() == PositionType.COPYMARKER) {
+					project.setCopyMarker(b.getLocation());
 					player.getLocation().getBlock().setType(Material.WOOL);
 					player.getLocation().getBlock().setData(DyeColor.YELLOW.getWoolData());
-					this.copymarker = player.getLocation();
 				}
 
-				if (this.ptype == PositionTypes.PASTEMARKER) {
+				if (project.getSelectedPositionType() == PositionType.PASTEMARKER) {
+					project.setPasteMarker(b.getLocation());
 					player.getLocation().getBlock().setType(Material.WOOL);
 					player.getLocation().getBlock().setData(DyeColor.ORANGE.getWoolData());
-					this.pastemarker = player.getLocation();
 				}
 			}
 
-			player.sendMessage(this.ptype.toString().toLowerCase() + " wurde ausgewählt.");
-			this.ptype = PositionTypes.DEFAULT;
+			player.sendMessage(project.getSelectedPositionType().toString().toLowerCase() + " wurde ausgewählt.");
+			project.setSelectedPositionType(PositionType.DEFAULT);
 
 			event.setCancelled(true);
 		}
