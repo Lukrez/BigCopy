@@ -2,6 +2,7 @@ package de.lukas.bigcopy;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import java.io.File;
 
 public class Project {
 
@@ -18,6 +19,35 @@ public class Project {
 	public Project(String projectName) {
 		this.projectName = projectName;
 		this.selectedPositionType = PositionType.DEFAULT;
+	}
+	
+	public void createFolderStructure(){
+		
+		File  projectfolder = new File(BigCopy.getInstance().getDataFolder(),this.projectName);
+		if (!projectfolder.exists()){
+			projectfolder.mkdir();
+		}
+		File  copyfolder = new File(projectfolder,"copy");
+		if (!copyfolder.exists()){
+			copyfolder.mkdir();
+		}
+			File  blocksfolder = new File(copyfolder,"blocks");
+			if (!blocksfolder.exists()){
+				blocksfolder.mkdir();
+			}
+			File  inventoriesfolder = new File(copyfolder,"inventories");
+			if (!inventoriesfolder.exists()){
+				inventoriesfolder.mkdir();
+			}
+			File  entitysfolder = new File(copyfolder,"entities");
+			if (!entitysfolder.exists()){
+				entitysfolder.mkdir();
+			}
+		File  pastefolder = new File(projectfolder,"paste");
+		if (!pastefolder.exists()){
+			pastefolder.mkdir();
+		}
+		/*TODO: create config*/
 	}
 
 	public String getProjectName() {

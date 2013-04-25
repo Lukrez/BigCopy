@@ -1,7 +1,9 @@
 package de.lukas.bigcopy;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
@@ -11,9 +13,10 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
-public class CopyTask extends BukkitRunnable {
+public class PasteTask extends BukkitRunnable {
 
 	public String playerName;
+
 	public int X1;
 	public int Y1;
 	public int Z1;
@@ -21,30 +24,36 @@ public class CopyTask extends BukkitRunnable {
 	public int X2;
 	public int Y2;
 	public int Z2;
-
+	
 	public int markerX;
 	public int markerY;
 	public int markerZ;
-	//private Location cm;
-	public int atX;
-	public int atY;
-	public int atZ;
+	public int pasteAtX;
+	public int pasteAtY;
+	public int pasteAtZ;
+	public int logAtX;
+	public int logAtY;
+	public int logAtZ;
+	
+	public FileReader fr;
+	public BufferedReader br;
 	public FileWriter fw;
 	public BufferedWriter bw;
 	public World world;
-	public boolean copyFinished;
+	public boolean pasteFinished;
 	public int delay = 20;
 	private Stopwatch swCopy;
 
 
-	public CopyTask(Project project) {
+	public PasteTask(Project project) {
 		this.world = project.getPos1().getWorld();
 		this.delay = project.getDelay();
 		this.playerName = project.getUser();
-		this.markerX = project.getCopyMarker().getBlockX();
-		this.markerY = project.getCopyMarker().getBlockY();
-		this.markerZ = project.getCopyMarker().getBlockZ();
+		this.markerX = project.getPasteMarker().getBlockX();
+		this.markerY = project.getPasteMarker().getBlockY();
+		this.markerZ = project.getPasteMarker().getBlockZ();
 		// define positions
+		// TODO: Rotations
 		if (project.getPos1().getBlockX() < project.getPos2().getBlockX()) {
 			this.X1 = project.getPos1().getBlockX();
 			this.X2 = project.getPos2().getBlockX();
@@ -66,18 +75,18 @@ public class CopyTask extends BukkitRunnable {
 			this.Z1 = project.getPos2().getBlockZ();
 			this.Z2 = project.getPos1().getBlockZ();
 		}
-
-		// define starting point
-		this.atX = this.X1 - 1;
-		this.atY = this.Y1;
-		this.atZ = this.Z1;
-
-		this.copyFinished = false;
-		// define path
 		
-		// open writer
-		this.openWriter(this.atY - this.markerY+".txt");
-		this.bw = new BufferedWriter(fw);
+		this.X1 = this.X1 + this.markerX -project.getCopyMarker().getBlockX();
+		this.Y1 = this.Y1 + this.markerY -project.getCopyMarker().getBlockY();
+		this.Z1 = this.Z1 + this.markerZ -project.getCopyMarker().getBlockZ();
+		
+		this.X2 = this.X2 + this.markerX -project.getCopyMarker().getBlockX();
+		this.Y2 = this.Y2 + this.markerY -project.getCopyMarker().getBlockY();
+		this.Z2 = this.Z2 + this.markerZ -project.getCopyMarker().getBlockZ();
+		
+		this.pasteFinished = false;
+		// open log writer
+		this.openWriter(name)
 
 		// Calculate size
 		int blocknrs = (this.X2 - this.X1 + 1) * (this.Y2 - this.Y1 + 1) * (this.Z2 - this.Z1 + 1);
@@ -174,7 +183,7 @@ public class CopyTask extends BukkitRunnable {
 	
 	public void openWriter(String name){
 		// open writer
-		File path = new File(BigCopy.getInstance().getDataFolder(),"copy"+File.separator + name);
+		File path = new File(BigCopy.getInstance().getDataFolder(),"paste"+File.separator + name);
 		try {
 			this.fw = new FileWriter(path);
 		} catch (IOException e) {
