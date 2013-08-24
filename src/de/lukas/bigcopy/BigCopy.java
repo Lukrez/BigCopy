@@ -99,7 +99,7 @@ public class BigCopy extends JavaPlugin implements Listener {
 					project.setUser(player.getName());
 					this.projects.put(player.getName(), project);
 
-					player.sendMessage("Projekt " + projectName + " wurde erstellt und geöffnet.");
+					player.sendMessage("Projekt " + projectName + " wurde erstellt und geï¿½ffnet.");
 					return true;
 				}
 
@@ -159,25 +159,25 @@ public class BigCopy extends JavaPlugin implements Listener {
 
 			if (args[0].equalsIgnoreCase("copymarker")) {
 				project.setSelectedPositionType(PositionType.COPYMARKER);
-				player.sendMessage("Bitte copymarker auswählen.");
+				player.sendMessage("Bitte copymarker auswï¿½hlen.");
 				return true;
 			}
 
 			if (args[0].equalsIgnoreCase("pastemarker")) {
 				project.setSelectedPositionType(PositionType.PASTEMARKER);
-				player.sendMessage("Bitte pastemarker auswählen.");
+				player.sendMessage("Bitte pastemarker auswï¿½hlen.");
 				return true;
 			}
 
 			if (args[0].equalsIgnoreCase("pos1")) {
 				project.setSelectedPositionType(PositionType.POS1);
-				player.sendMessage("Bitte pos1 auswählen.");
+				player.sendMessage("Bitte pos1 auswï¿½hlen.");
 				return true;
 			}
 
 			if (args[0].equalsIgnoreCase("pos2")) {
 				project.setSelectedPositionType(PositionType.POS2);
-				player.sendMessage("Bitte pos2 auswählen.");
+				player.sendMessage("Bitte pos2 auswï¿½hlen.");
 				return true;
 			}
 
@@ -199,7 +199,7 @@ public class BigCopy extends JavaPlugin implements Listener {
 
 			if (args[0].equalsIgnoreCase("stop")) {
 				if (project.getCopyTask() == null) {
-					player.sendMessage("In diesem Projekt läuft gerade kein Kopiervorgang.");
+					player.sendMessage("In diesem Projekt lï¿½uft gerade kein Kopiervorgang.");
 					return true;
 				}
 				project.stopCopyTask();
@@ -218,7 +218,7 @@ public class BigCopy extends JavaPlugin implements Listener {
 	public Project loadProject(String projectName, Player player) {
 		for (Project project : this.projects.values()) {
 			if (project.getProjectName().equalsIgnoreCase(projectName)) {
-				player.sendMessage("Der User " + project.getUser() + " hat das Projekt schon geöffnet.");
+				player.sendMessage("Der User " + project.getUser() + " hat das Projekt schon geï¿½ffnet.");
 				return null;
 			}
 		}
@@ -330,7 +330,7 @@ public class BigCopy extends JavaPlugin implements Listener {
 				}
 			}
 
-			player.sendMessage(project.getSelectedPositionType().toString().toLowerCase() + " wurde ausgewählt.");
+			player.sendMessage(project.getSelectedPositionType().toString().toLowerCase() + " wurde ausgewï¿½hlt.");
 			project.setSelectedPositionType(PositionType.DEFAULT);
 
 			event.setCancelled(true);

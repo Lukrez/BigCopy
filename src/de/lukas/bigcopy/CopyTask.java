@@ -83,7 +83,7 @@ public class CopyTask extends BukkitRunnable {
 		int blocknrs = (this.X2 - this.X1 + 1) * (this.Y2 - this.Y1 + 1) * (this.Z2 - this.Z1 + 1);
 		Player player = Bukkit.getPlayer(this.playerName);
 		if (player != null) {
-			player.sendMessage(blocknrs + " Blöcke zum kopieren ausgewählt.");
+			player.sendMessage(blocknrs + " Blï¿½cke zum kopieren ausgewï¿½hlt.");
 		}
 	}
 
@@ -94,7 +94,7 @@ public class CopyTask extends BukkitRunnable {
 		at += (this.X2 - this.X1 + 1) * (this.Z2 - this.atZ + 1);
 		at += (this.X2 - this.atX);
 
-		return at + " Blöcke von " + blocknrs + " kopiert. Dies sind " + at / (float) blocknrs * 100 + "%";
+		return at + " Blï¿½cke von " + blocknrs + " kopiert. Dies sind " + at / (float) blocknrs * 100 + "%";
 	}
 
 	@Override
