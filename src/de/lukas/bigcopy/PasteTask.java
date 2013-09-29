@@ -13,9 +13,9 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
-public class PasteTask extends BukkitRunnable {
+/*public class PasteTask extends BukkitRunnable {
 
-	public String playerName;
+	/*public String playerName;
 
 	public int X1;
 	public int Y1;
@@ -205,4 +205,4 @@ public class PasteTask extends BukkitRunnable {
 			e.printStackTrace();
 		}
 	}
-}
+}*/
