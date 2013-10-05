@@ -41,9 +41,9 @@ public class CopyTask extends BukkitRunnable {
 		this.world = project.getPos1().getWorld();
 		this.delay = project.getDelay();
 		this.playerName = project.getUser();
-		this.markerX = project.getCopyMarker().getBlockX();
-		this.markerY = project.getCopyMarker().getBlockY();
-		this.markerZ = project.getCopyMarker().getBlockZ();
+		this.markerX = project.getCopyCenter().getBlockX();
+		this.markerY = project.getCopyCenter().getBlockY();
+		this.markerZ = project.getCopyCenter().getBlockZ();
 		// define positions
 		if (project.getPos1().getBlockX() < project.getPos2().getBlockX()) {
 			this.X1 = project.getPos1().getBlockX();

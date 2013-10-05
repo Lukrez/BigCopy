@@ -13,6 +13,11 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+
+public class PasteTask{
+	
+	
+}
 /*public class PasteTask extends BukkitRunnable {
 
 	/*public String playerName;
