@@ -6,6 +6,7 @@ import java.util.HashMap;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -79,13 +80,13 @@ public class BigCopy extends JavaPlugin implements Listener {
 			}
 			
 			if (args[0].equalsIgnoreCase("create")) {
-				if (args.length == 2) {
+				if (args.length == 1) {
 					player.sendMessage("Bitte Projektname angeben.");
 					return true;
 				}
 
 				String projectName = "";
-				for (int i = 2; i < args.length; i++) {
+				for (int i = 1; i < args.length; i++) {
 					projectName += args[i] + " ";
 				}
 				this.createProject(projectName, player);
@@ -190,12 +191,6 @@ public class BigCopy extends JavaPlugin implements Listener {
 					return true;
 				}
 				
-				// Get CopyCenterPosition and Playerdirection
-				Location copyCenter = player.getLocation().subtract(0, 1, 0);
-				project.setCopyCenter(copyCenter);
-				project.setMarker(copyCenter, MarkerType.CopyCenter);
-				//TODO: Calculate Positions
-				
 				Direction direction = Direction.parseDirection(player.getLocation());
 				if (direction == Direction.UNDEFINED){
 					player.sendMessage("Bitte wähle eine eindeutige Richtung zum Kopieren aus.");
@@ -203,6 +198,66 @@ public class BigCopy extends JavaPlugin implements Listener {
 				}
 				
 				project.setCopyDirection(direction);
+				
+				// Get CopyCenterPosition and Playerdirection
+				Location copyCenter = player.getLocation().subtract(0, 1, 0);
+				if (project.getCopyCenter() != null){
+					project.deleteMarker(MarkerType.CopyCenter);
+				}
+				project.setCopyCenter(copyCenter);
+				project.setMarker(copyCenter, MarkerType.CopyCenter);
+				
+				//TODO: Calculate Positions
+				project.deleteMarker(MarkerType.Pos1);
+				project.deleteMarker(MarkerType.Pos2);
+				
+				// Calculate min max positions
+				int minX, minY, minZ;
+				int maxX, maxY, maxZ;
+				if (project.getPos1().getBlockX() < project.getPos2().getBlockX()){
+					minX = project.getPos1().getBlockX();
+					maxX = project.getPos2().getBlockX();
+				} else {
+					minX = project.getPos2().getBlockX();
+					maxX = project.getPos1().getBlockX();
+				}
+				if (project.getPos1().getBlockY() < project.getPos2().getBlockY()){
+					minY = project.getPos1().getBlockY();
+					maxY = project.getPos2().getBlockY();
+				} else {
+					minY = project.getPos2().getBlockY();
+					maxY = project.getPos1().getBlockY();
+				}
+				if (project.getPos1().getBlockZ() < project.getPos2().getBlockZ()){
+					minZ = project.getPos1().getBlockZ();
+					maxZ = project.getPos2().getBlockZ();
+				} else {
+					minZ = project.getPos2().getBlockZ();
+					maxZ = project.getPos1().getBlockZ();
+				}
+				World w = project.getPos1().getWorld();
+				Location l1 = new Location(w, minX, minY, minZ);
+				Location l2 = new Location(w, maxX, maxY, maxZ);
+				Location l3 = new Location(w, maxX, minY, minZ);
+				Location l4 = new Location(w, minX, maxY, maxZ);
+				
+				Location l5 = new Location(w, minX, maxY, minZ);
+				Location l6 = new Location(w, maxX, minY, maxZ);
+				Location l7 = new Location(w, maxX, maxY, minZ);
+				Location l8 = new Location(w, minX, minY, maxZ);
+				
+				project.setMarker(l1, MarkerType.CopyPos1);
+				project.setMarker(l2, MarkerType.CopyPos2);
+				project.setMarker(l3, MarkerType.CopyPos3);
+				project.setMarker(l4, MarkerType.CopyPos4);
+				project.setMarker(l5, MarkerType.CopyPos5);
+				project.setMarker(l6, MarkerType.CopyPos6);
+				project.setMarker(l7, MarkerType.CopyPos7);
+				project.setMarker(l8, MarkerType.CopyPos8);
+				
+				project.setPos1(l1);
+				project.setPos2(l2);
+
 
 				//project.startCopyTask();
 				player.sendMessage("Kopiervorgang gestartet.");

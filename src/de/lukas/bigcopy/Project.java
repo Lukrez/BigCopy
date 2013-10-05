@@ -13,7 +13,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 
 public class Project {
@@ -129,6 +131,14 @@ public class Project {
 			configYml.set("paste.center", Project.LocationToString(this.pasteCenter));
 			configYml.set("paste.direction", this.pasteDirection.toString());
 			
+			configYml.set("showmarker", this.showMarker);
+			
+			List<String> makerlist = new ArrayList<String>();
+			for (Marker marker : this.markers.values()){
+				makerlist.add(marker.toString());
+			}
+			configYml.set("markers", makerlist);
+			
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(this.config));
 			out.write(configYml.saveToString().getBytes());
 			out.flush();
@@ -141,6 +151,7 @@ public class Project {
 	}
 	
 	
+	@SuppressWarnings("unchecked")
 	public boolean loadConfig(){
 		try {
 			System.out.println("trying to load config");
@@ -161,6 +172,15 @@ public class Project {
 			this.pasteStatus = PasteStatus.valueOf(ymlConfig.getString("paste.status"));
 			this.pasteCenter = Project.parseLocationFromString(ymlConfig.getString("paste.center"));
 			this.pasteDirection = Direction.valueOf(ymlConfig.getString("paste.direction"));
+			this.showMarker = ymlConfig.getBoolean("showmarker");
+			
+			this.markers.clear();
+			for (String s : (List<String>) ymlConfig.getList("markers")){
+				Marker marker = new Marker(s);
+				this.markers.put(marker.getType(),marker);
+			}
+			this.toggleMarkers(this.showMarker);
+
 			System.out.println("trying to load config - suscess");
 			return true;
 			
@@ -297,6 +317,7 @@ public class Project {
 				marker.showBlock();
 			}
 		}
+		this.saveConfig();
 	}
 	
 	public void setMarker(Location loc, MarkerType type){

@@ -30,8 +30,8 @@ public class Marker {
 		
 	}
 	
-	public void setNewLocation(Location loc){
-		
+	public MarkerType getType(){
+		return this.marker;
 	}
 	
 	public String toString(){
