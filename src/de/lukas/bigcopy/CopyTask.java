@@ -1,13 +1,18 @@
 package de.lukas.bigcopy;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -22,10 +27,10 @@ public class CopyTask extends BukkitRunnable {
 	public int Y2;
 	public int Z2;
 
-	public int markerX;
-	public int markerY;
-	public int markerZ;
-	//private Location cm;
+	public int centerX;
+	public int centerY;
+	public int centerZ;
+	
 	public int atX;
 	public int atY;
 	public int atZ;
@@ -33,17 +38,24 @@ public class CopyTask extends BukkitRunnable {
 	public BufferedWriter bw;
 	public World world;
 	public boolean copyFinished;
+	public boolean copyAbort;
 	public int delay = 20;
 	private Stopwatch swCopy;
+	private File taskYml;
+	private File copyFolder;
+	private File blocksFolder;
+	private File inventoriesFolder;
+	private File entititesFolder;
+	private boolean writerOpen = false;
 
 
 	public CopyTask(Project project) {
 		this.world = project.getPos1().getWorld();
 		this.delay = project.getDelay();
 		this.playerName = project.getUser();
-		this.markerX = project.getCopyCenter().getBlockX();
-		this.markerY = project.getCopyCenter().getBlockY();
-		this.markerZ = project.getCopyCenter().getBlockZ();
+		this.centerX = project.getCopyCenter().getBlockX();
+		this.centerY = project.getCopyCenter().getBlockY();
+		this.centerZ = project.getCopyCenter().getBlockZ();
 		// define positions
 		if (project.getPos1().getBlockX() < project.getPos2().getBlockX()) {
 			this.X1 = project.getPos1().getBlockX();
@@ -73,19 +85,70 @@ public class CopyTask extends BukkitRunnable {
 		this.atZ = this.Z1;
 
 		this.copyFinished = false;
+		this.copyAbort = false;
 		// define path
 		
 		// open writer
-		this.openWriter(this.atY - this.markerY+".txt");
+		this.openWriter(this.atY - this.centerY+".txt");
 		this.bw = new BufferedWriter(fw);
 
 		// Calculate size
 		int blocknrs = (this.X2 - this.X1 + 1) * (this.Y2 - this.Y1 + 1) * (this.Z2 - this.Z1 + 1);
 		Player player = Bukkit.getPlayer(this.playerName);
 		if (player != null) {
-			player.sendMessage(blocknrs + " Bl�cke zum kopieren ausgew�hlt.");
+			player.sendMessage(blocknrs + " Blöcke zum kopieren ausgewählt.");
+		}
+		this.copyFolder = project.getCopyFolder();
+		this.blocksFolder = new File(this.copyFolder,"blocks");
+		if (!this.blocksFolder.exists()){
+			this.blocksFolder.mkdir();
+		}
+		this.inventoriesFolder = new File(this.copyFolder,"inventories");
+		if (!this.inventoriesFolder.exists()){
+			this.inventoriesFolder.mkdir();
+		}
+		this.entititesFolder = new File(this.copyFolder,"entities");
+		if (!this.entititesFolder.exists()){
+			this.entititesFolder.mkdir();
+		}
+		this.taskYml = new File(this.copyFolder,"task.yml");
+		
+		
+	}
+	
+	public void saveTaskFile(){
+		YamlConfiguration ymlTask = new YamlConfiguration();
+		ymlTask.set("atX",  this.atX);
+		ymlTask.set("atY",  this.atY);
+		ymlTask.set("atZ",  this.atZ);
+		try {
+			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(this.taskYml));
+			out.flush();
+			out.close();
+			out.write(ymlTask.saveToString().getBytes());
+		} catch (IOException e) {
+			this.copyAbort = true;
+			e.printStackTrace();
 		}
 	}
+	
+	
+	public void loadTaskFile(){
+		if (!this.taskYml.exists())
+			return;
+		try {
+			BufferedInputStream in = new BufferedInputStream(new FileInputStream(this.taskYml));
+			YamlConfiguration ymlTask = new YamlConfiguration();
+			ymlTask.load(in);
+			this.atX = ymlTask.getInt("atX");
+			this.atX = ymlTask.getInt("atX");
+			this.atX = ymlTask.getInt("atX");			
+		} catch (IOException | InvalidConfigurationException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	
 
 	public String getStatus() {
 		// 
@@ -94,7 +157,7 @@ public class CopyTask extends BukkitRunnable {
 		at += (this.X2 - this.X1 + 1) * (this.Z2 - this.atZ + 1);
 		at += (this.X2 - this.atX);
 
-		return at + " Bl�cke von " + blocknrs + " kopiert. Dies sind " + at / (float) blocknrs * 100 + "%";
+		return at + " Blöcke von " + blocknrs + " kopiert. Dies sind " + at / (float) blocknrs * 100 + "%";
 	}
 
 	@Override
@@ -109,7 +172,7 @@ public class CopyTask extends BukkitRunnable {
 		sw.start();
 
 		int i = 0;
-		while (i < 1000 && !this.copyFinished) {
+		while (i < 1000 && !this.copyFinished && !this.copyAbort) {
 			i++;
 			this.atX++;
 			if (this.atX > this.X2) {
@@ -120,7 +183,8 @@ public class CopyTask extends BukkitRunnable {
 				this.atZ = this.Z1;
 				this.atY++;
 				this.closeWriter();
-				this.openWriter(this.atY - this.markerY+".txt");
+				if (this.atY <= this.Y2)
+					this.openWriter(this.atY - this.centerY+".txt");
 				
 			}
 			if (this.atY > this.Y2) {
@@ -132,9 +196,9 @@ public class CopyTask extends BukkitRunnable {
 				if (b.getTypeId() == 0)
 					continue;
 				String s = "";
-				s += (this.atX - this.markerX) + ":";
-				s += (this.atY - this.markerY) + ":";
-				s += (this.atZ - this.markerZ) + ":";
+				s += (this.atX - this.centerX) + ":";
+				s += (this.atY - this.centerY) + ":";
+				s += (this.atZ - this.centerZ) + ":";
 				
 				s += b.getTypeId() + ":";
 				s += b.getData() + "\n";
@@ -145,13 +209,14 @@ public class CopyTask extends BukkitRunnable {
 					this.copyFinished = true;
 					e.printStackTrace();
 				}
+				this.saveTaskFile();
 			}
 		}
 		// 	write into file
 		try {
 			this.bw.flush();
 		} catch (IOException e) {
-			this.copyFinished = true;
+			this.copyAbort = true;
 			e.printStackTrace();
 		}
 		sw.stop();
@@ -167,14 +232,26 @@ public class CopyTask extends BukkitRunnable {
 				player.sendMessage("Kopiervorgang erledigt.");
 			}
 
+		} else if (this.copyAbort){
+			this.closeWriter();
+			this.swCopy.stop();
+			System.out.println("Kopiervorgang abgebrochen.");
+			Player player = Bukkit.getPlayer(this.playerName);
+			if (player != null) {
+				player.sendMessage("Kopiervorgang abgebrochen.");
+			}
 		} else {
 			Bukkit.getScheduler().scheduleSyncDelayedTask(BigCopy.getInstance(), this, this.delay);
 		}
 	}
 	
 	public void openWriter(String name){
+		if (this.writerOpen){
+			System.out.println("A writer is already open");
+			return;
+		}
 		// open writer
-		File path = new File(BigCopy.getInstance().getDataFolder(),"copy"+File.separator + name);
+		File path = new File(this.blocksFolder,name);
 		try {
 			this.fw = new FileWriter(path);
 		} catch (IOException e) {
@@ -184,6 +261,10 @@ public class CopyTask extends BukkitRunnable {
 	}
 	
 	public void closeWriter(){
+		if (!this.writerOpen){
+			System.out.println("No writer needs closing.");
+			return;
+		}
 		try {
 			this.bw.flush();
 		} catch (IOException e) {

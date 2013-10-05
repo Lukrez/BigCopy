@@ -42,13 +42,13 @@ public class Project {
 	private boolean showMarker;
 	private HashMap<MarkerType,Marker> markers;
 	
-	File projectfolder;
-	File copyfolder;
-	File blocksfolder;
-	File inventoriesfolder;
-	File entitysfolder;
-	File pastefolder;
-	File config;
+	private File projectfolder;
+	private File copyfolder;
+	private File blocksfolder;
+	private File inventoriesfolder;
+	private File entitysfolder;
+	private File pastefolder;
+	private File config;
 	
 	
 
@@ -65,7 +65,7 @@ public class Project {
 		this.pasteStatus = PasteStatus.NONE;
 		this.pasteCenter = null;
 		this.pasteDirection = Direction.UNDEFINED;
-		this.delay = 1000;
+		this.delay = 20;
 		this.showMarker = true;
 		this.markers = new HashMap<MarkerType, Marker>();
 		
@@ -90,7 +90,7 @@ public class Project {
 		if (!this.copyfolder.exists()){
 			this.copyfolder.mkdir();
 		}
-		this.blocksfolder = new File(this.copyfolder,"blocks");
+			this.blocksfolder = new File(this.copyfolder,"blocks");
 			if (!this.blocksfolder.exists()){
 				this.blocksfolder.mkdir();
 			}
@@ -102,13 +102,24 @@ public class Project {
 			if (!this.entitysfolder.exists()){
 				this.entitysfolder.mkdir();
 			}
-			this.pastefolder = new File(this.projectfolder,"paste");
+		this.pastefolder = new File(this.projectfolder,"paste");
 		if (!this.pastefolder.exists()){
 			this.pastefolder.mkdir();
 		}
 		this.config = new File(this.projectfolder,"config.yml");
 		if (!this.config.exists())
 			this.saveConfig();
+	}
+	
+	public File getProjectFolder(){
+		return this.projectfolder;
+	}
+	
+	public File getCopyFolder(){
+		return this.copyfolder;
+	}
+	public File getPasteFolder(){
+		return this.pastefolder;
 	}
 	
 	public boolean saveConfig(){
@@ -158,7 +169,6 @@ public class Project {
 			BufferedInputStream in = new BufferedInputStream(new FileInputStream(this.config));
 			YamlConfiguration ymlConfig = new YamlConfiguration();
 			ymlConfig.load(in);
-			//TODO: something is not loading
 			this.projectName = ymlConfig.getString("name");
 			this.user = ymlConfig.getString("user");
 			this.status = Status.valueOf(ymlConfig.getString("status"));
@@ -266,16 +276,34 @@ public class Project {
 		return delay;
 	}
 
-	public void startCopyTask() {
+	/*public void startCopyTask() {
 		this.cp = new CopyTask(this);
 		this.saveConfig();
 		Bukkit.getScheduler().scheduleSyncDelayedTask(BigCopy.getInstance(), this.cp, 60);
+	}*/
+	
+	public void newCopyTask() {
+		this.cp = new CopyTask(this);
+		this.status = Status.COPYING;
+		this.copyStatus = CopyStatus.COPYING_PAUSED;
+		this.saveConfig();
+	}
+	
+	public boolean resumeCopyTask(){
+		if (this.cp == null)
+			return false;
+		Bukkit.getScheduler().scheduleSyncDelayedTask(BigCopy.getInstance(), this.cp, 60);
+		this.status = Status.COPYING;
+		this.copyStatus = CopyStatus.COPYING;
+		this.saveConfig();
+		return true;
 	}
 	
 	public void stopCopyTask() {
-		this.saveConfig();
 		Bukkit.getScheduler().cancelTask(this.cp.getTaskId());
 		this.cp = null;
+		this.copyStatus = CopyStatus.COPYING_PAUSED;
+		this.saveConfig();
 	}
 	
 	public String getStatus(){

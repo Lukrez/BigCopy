@@ -260,7 +260,18 @@ public class BigCopy extends JavaPlugin implements Listener {
 
 
 				//project.startCopyTask();
-				player.sendMessage("Kopiervorgang gestartet.");
+				project.newCopyTask();
+				player.sendMessage("Kopierparameter ausgewählt. Bitte checke die angezeigten Kopierpunkte.");
+				player.sendMessage("Starte das Kopieren mit /bigcopy resume");
+				return true;
+			}
+			
+			if (args[0].equalsIgnoreCase("resume")) {
+				if (project.resumeCopyTask()){
+					player.sendMessage("Kopiervorgang gestartet.");
+				} else {
+					player.sendMessage("Fehler beim starten des Kopiervorgangs. Bitte starte das Kopieren durch /bigcopy copy");
+				}
 				return true;
 			}
 
@@ -324,6 +335,9 @@ public class BigCopy extends JavaPlugin implements Listener {
 		Project project = new Project(projectName, player);
 		this.projects.put(project.getUser(), project);
 		player.sendMessage("Projekt " + project.getProjectName() + " wurde geladen.");
+		
+		// check if the copying has been stopped
+		
 	}
 	
 	public void closeProject(Project project) {
