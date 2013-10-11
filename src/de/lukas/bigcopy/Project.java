@@ -50,6 +50,8 @@ public class Project {
 	private File pastefolder;
 	private File config;
 	
+	private Rotationmatrix rotationmatrix;
+	
 	
 
 	public Project(String projectName, Player user) {
@@ -282,11 +284,12 @@ public class Project {
 		Bukkit.getScheduler().scheduleSyncDelayedTask(BigCopy.getInstance(), this.cp, 60);
 	}*/
 	
-	public void newCopyTask() {
+	public void startNewCopyTask() {
 		this.cp = new CopyTask(this);
 		this.status = Status.COPYING;
-		this.copyStatus = CopyStatus.COPYING_PAUSED;
+		this.copyStatus = CopyStatus.COPYING;
 		this.saveConfig();
+		Bukkit.getScheduler().scheduleSyncDelayedTask(BigCopy.getInstance(), this.cp, 60);
 	}
 	
 	public boolean resumeCopyTask(){
@@ -304,6 +307,14 @@ public class Project {
 		this.cp = null;
 		this.copyStatus = CopyStatus.COPYING_PAUSED;
 		this.saveConfig();
+	}
+	
+	public Direction getCopyDirection(){
+		return this.copyDirection;
+	}
+	
+	public Direction getPasteDirection(){
+		return this.pasteDirection;
 	}
 	
 	public String getStatus(){
@@ -364,6 +375,10 @@ public class Project {
 		}
 	}
 	
+	public Marker getMarker(MarkerType type){
+		return this.markers.get(type);
+	}
+	
 	public void deleteMarker(MarkerType type){
 
 		Marker marker = this.markers.get(type);
@@ -393,6 +408,46 @@ public class Project {
 		int z = Integer.parseInt(split[3]);
 		return new Location(w,x,y,z);
 	}
+	
+	/**
+	 * calc rotation matrix
+	 * Rx = [cos phi  - sin phi]
+	 * Rz = [sin phi  cos phi]
+	 * Richtungsvektoren sind Einheitsvektoren (x / z):
+	 * E = (1 / 0 )
+	 * W = (-1 / 0)
+	 * S = (0 / 1)
+	 * N = (0 / -1)
+	 * cos phi zwischen CopyRichtung (c) und PasteRichtung (p) = c*p
+	 * sin phi = 1 - cos phi * cos phi
+	 * Rx = [c*p  (c*p)²-1]
+	 * Rz = [1-(c*p)² c*p]
+	 */
+	
+	public void calculateRotationmatrix(){
+		if (this.copyDirection == Direction.UNDEFINED || this.pasteDirection == Direction.UNDEFINED){
+			this.rotationmatrix = null;
+			return;
+		}
+		this.rotationmatrix = new Rotationmatrix(this.copyDirection, this.pasteDirection);
+	}
+	
+	public Location calcPastePosition(Location a){
+		if (this.rotationmatrix == null)
+			return null;
+		// calc copyvector
+		int ax = a.getBlockX()-this.copyCenter.getBlockX();
+		int ay = a.getBlockY()-this.copyCenter.getBlockY();
+		int az = a.getBlockZ()-this.copyCenter.getBlockZ();
+		
+		
+		// calc pastevector
+		int bx = this.pasteCenter.getBlockX()+this.rotationmatrix.getA1()*ax+this.rotationmatrix.getA2()*az;
+		int by = this.pasteCenter.getBlockY()+ay;
+		int bz = this.pasteCenter.getBlockZ()+this.rotationmatrix.getB1()*ax+this.rotationmatrix.getB2()*az;
+		return new Location(a.getWorld(),bx,by,bz);
+	}
+	
 	
 	
 }

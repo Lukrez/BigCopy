@@ -22,6 +22,38 @@ public static Direction parseDirection(Location loc){
 	return UNDEFINED;
 }
 
+public int getXComponent(){
+	switch(this){
+	case EAST: return 1;
+	case WEST: return -1;
+	case NORTH: return 0;
+	case SOUTH: return 0;
+	default:
+		return 0;
+	}
+}
+public int getZComponent(){
+	switch(this){
+	case EAST: return 0;
+	case WEST: return 0;
+	case NORTH: return -1;
+	case SOUTH: return 1;
+	default:
+		return 0;
+	}
+}
+
+public Direction rotate(){
+	switch(this){
+	case EAST: return NORTH;
+	case NORTH: return WEST;
+	case WEST: return SOUTH;
+	case SOUTH: return EAST;
+	default:
+		return UNDEFINED;
+	}
+}
+
 }
 
 

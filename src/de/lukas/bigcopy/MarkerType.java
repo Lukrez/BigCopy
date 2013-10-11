@@ -34,7 +34,7 @@ public enum MarkerType {
 		case PastePos6:return DyeColor.GREEN.getWoolData();
 		case PastePos7:return DyeColor.BLUE.getWoolData();
 		case PastePos8:return DyeColor.YELLOW.getWoolData();
-		case PasteCenter:return DyeColor.BLACK.getWoolData();
+		case PasteCenter:return DyeColor.SILVER.getWoolData();
 		}
 		return 0;
 	}

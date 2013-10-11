@@ -47,4 +47,8 @@ public class Marker {
 		this.loc.getBlock().setTypeId(this.blockId);
 		this.loc.getBlock().setData(this.blockData);
 	}
+	
+	public Location getLocation(){
+		return this.loc;
+	}
 }
