@@ -46,6 +46,9 @@ public class CopyTask extends BukkitRunnable {
 	private File blocksFolder;
 	private File inventoriesFolder;
 	private File entititesFolder;
+	
+	private File blockFile;
+	
 	private boolean writerOpen = false;
 
 
@@ -86,11 +89,6 @@ public class CopyTask extends BukkitRunnable {
 
 		this.copyFinished = false;
 		this.copyAbort = false;
-		// define path
-		
-		// open writer
-		this.openWriter(this.atY - this.centerY+".txt");
-		this.bw = new BufferedWriter(fw);
 
 		// Calculate size
 		int blocknrs = (this.X2 - this.X1 + 1) * (this.Y2 - this.Y1 + 1) * (this.Z2 - this.Z1 + 1);
@@ -113,6 +111,8 @@ public class CopyTask extends BukkitRunnable {
 		}
 		this.taskYml = new File(this.copyFolder,"task.yml");
 		
+		// open writer
+		this.openWriter(this.atY - this.centerY+".txt");
 		
 	}
 	
@@ -187,14 +187,15 @@ public class CopyTask extends BukkitRunnable {
 					this.openWriter(this.atY - this.centerY+".txt");
 				
 			}
+			
 			if (this.atY > this.Y2) {
 				// tell task to stop and leave while loop
 				this.copyFinished = true;
 			} else {
 				Block b = this.world.getBlockAt(this.atX, this.atY, this.atZ);
 				// check for air
-				if (b.getTypeId() == 0)
-					continue;
+				/*if (b.getTypeId() == 0)
+					continue;*/
 				String s = "";
 				s += (this.atX - this.centerX) + ":";
 				s += (this.atY - this.centerY) + ":";
@@ -203,6 +204,7 @@ public class CopyTask extends BukkitRunnable {
 				s += b.getTypeId() + ":";
 				s += b.getData() + "\n";
 				try {
+					System.out.println("writing "+s.length()+" blocks into file at y"+this.atY);
 					this.bw.write(s);
 				} catch (IOException e) {
 					//TODO: fehler in log schreiben 
@@ -212,9 +214,11 @@ public class CopyTask extends BukkitRunnable {
 				this.saveTaskFile();
 			}
 		}
-		// 	write into file
+		// write into file
 		try {
+			System.out.println("flushing");
 			this.bw.flush();
+			System.out.println("flushing finished");
 		} catch (IOException e) {
 			this.copyAbort = true;
 			e.printStackTrace();
@@ -251,13 +255,15 @@ public class CopyTask extends BukkitRunnable {
 			return;
 		}
 		// open writer
-		File path = new File(this.blocksFolder,name);
+		this.blockFile = new File(this.blocksFolder,name);
 		try {
-			this.fw = new FileWriter(path);
+			this.fw = new FileWriter(this.blockFile);
+			System.out.println("new blockfile "+this.blockFile.getAbsolutePath());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		this.bw = new BufferedWriter(fw);
+		this.bw = new BufferedWriter(this.fw);
+		this.writerOpen = true;
 	}
 	
 	public void closeWriter(){
@@ -266,13 +272,17 @@ public class CopyTask extends BukkitRunnable {
 			return;
 		}
 		try {
+			System.out.println("flushing");
 			this.bw.flush();
+			System.out.println("flushing finished");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		try {
 			this.bw.close();
 			this.fw.close();
+			System.out.println("closing blockfile "+this.blockFile.getAbsolutePath());
+			this.writerOpen = false;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

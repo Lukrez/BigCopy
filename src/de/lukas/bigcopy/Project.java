@@ -409,21 +409,6 @@ public class Project {
 		return new Location(w,x,y,z);
 	}
 	
-	/**
-	 * calc rotation matrix
-	 * Rx = [cos phi  - sin phi]
-	 * Rz = [sin phi  cos phi]
-	 * Richtungsvektoren sind Einheitsvektoren (x / z):
-	 * E = (1 / 0 )
-	 * W = (-1 / 0)
-	 * S = (0 / 1)
-	 * N = (0 / -1)
-	 * cos phi zwischen CopyRichtung (c) und PasteRichtung (p) = c*p
-	 * sin phi = 1 - cos phi * cos phi
-	 * Rx = [c*p  (c*p)²-1]
-	 * Rz = [1-(c*p)² c*p]
-	 */
-	
 	public void calculateRotationmatrix(){
 		if (this.copyDirection == Direction.UNDEFINED || this.pasteDirection == Direction.UNDEFINED){
 			this.rotationmatrix = null;
