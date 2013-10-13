@@ -79,6 +79,8 @@ public class BigCopy extends JavaPlugin implements Listener {
 				return true;
 			}
 			
+			
+			
 			if (args[0].equalsIgnoreCase("create")) {
 				if (args.length == 1) {
 					player.sendMessage("Bitte Projektname angeben.");
@@ -134,13 +136,13 @@ public class BigCopy extends JavaPlugin implements Listener {
 				}
 				for (Project project : this.projects.values()) {
 					if (project.getProjectName().equalsIgnoreCase(projectName)) {
-						player.sendMessage(project.getStatus());
+						player.sendMessage(project.getInfo());
 						return true;
 					}
 				}
 				Project project = this.projects.get(player.getName());
 				if (project != null){
-					player.sendMessage(project.getStatus());
+					player.sendMessage(project.getInfo());
 					return true;
 				}
 				
@@ -155,6 +157,16 @@ public class BigCopy extends JavaPlugin implements Listener {
 			if (project == null) {
 				player.sendMessage("Du hast keine BigCopy Projekte offen.");
 				return true;
+			}
+			
+			if (args[0].equalsIgnoreCase("info")) {
+				if (project.getSelectedPositionType() == PositionType.DEFAULT){
+					project.setSelectedPositionType(PositionType.INFO);
+					return true;
+				}
+				project.setSelectedPositionType(PositionType.DEFAULT);
+				return true;
+				
 			}
 
 			if (args[0].equalsIgnoreCase("pos1")) {
@@ -252,14 +264,92 @@ public class BigCopy extends JavaPlugin implements Listener {
 				return true;
 			}
 			
+			
+			if (args[0].equalsIgnoreCase("paste")) {
+				// check status
+				// TODO: verfeinern
+				
+				
+				if (project.getCopyStatus() != CopyStatus.COPYING_FINISHED){
+					player.sendMessage("Kopiervorgang wurde noch nicht abgeschlossen!");
+					return true;
+				}
+				
+				if (project.getPasteStatus() != PasteStatus.NONE){
+					player.sendMessage("Pastevorgang wurde bereits angefangen oder hat mit einem Fehler abgebrochen!");
+					return true;
+				}
+				
+				if (project.getStatus() != Status.FINISHED){
+					player.sendMessage("Project ist momentan beschäftigt oder hat einen Fehler!");
+					return true;
+				}
+				
+				
+				// check validity of config
+				if (project.getPos1() == null){
+					player.sendMessage("Location 1 ist nicht gesetzt");
+					return true;
+				}
+				if (project.getPos2() == null){
+					player.sendMessage("Location 2 ist nicht gesetzt");
+					return true;
+				}
+				
+				if (project.getCopyCenter() == null){
+					player.sendMessage("CopyCenter ist nicht gesetzt");
+					return true;
+				}
+				
+				if (project.getCopyDirection() == Direction.UNDEFINED){
+					player.sendMessage("CopyDirection ist nicht eindeutig!");
+					return true;
+				}
+				
+				if (project.getPasteCenter() == null){
+					player.sendMessage("PasteCenter ist nicht gesetzt");
+					return true;
+				}
+				
+				if (project.getPasteDirection() == Direction.UNDEFINED){
+					player.sendMessage("PasteDirection ist nicht eindeutig!");
+					return true;
+				}
+				
+				if (!project.getPos1().getWorld().equals(project.getPos2().getWorld()) || !project.getCopyCenter().getWorld().equals(project.getPos1().getWorld())) {
+					player.sendMessage("Eine oder mehrere Locations sind in der falschen Welt.");
+					return true;
+				}
+				
+				project.startNewPasteTask();
+				player.sendMessage("Pasten wurde gestartet.");
+				return true;
+			}
+			
 			if (args[0].equalsIgnoreCase("resume")) {
 				
-				if (project.resumeCopyTask()){
-					player.sendMessage("Kopiervorgang gestartet.");
-				} else {
-					player.sendMessage("Fehler beim starten des Kopiervorgangs. Bitte starte das Kopieren durch /bigcopy copy");
+				if (project.getStatus() == Status.COPYING){
+					project.calculateRotationmatrix();
+					if (project.resumeCopyTask()){
+						player.sendMessage("Kopiervorgang gestartet.");
+						return true;
+					} else {
+						player.sendMessage("Fehler beim starten des Kopiervorgangs. Bitte starte das Kopieren durch /bigcopy copy");
+						return true;
+					}
 				}
-				return true;
+				if (project.getStatus() == Status.PASTING){
+					project.calculateRotationmatrix();
+					if (project.resumePasteTask()){
+						player.sendMessage("Pastevorgang gestartet.");
+						return true;
+					} else {
+						player.sendMessage("Fehler beim starten des Pastevorgangs. Bitte starte das Kopieren durch /bigcopy copy");
+						return true;
+					}
+				}
+				
+				
 			}
 
 			if (args[0].equalsIgnoreCase("stop")) {
@@ -324,6 +414,7 @@ public class BigCopy extends JavaPlugin implements Listener {
 		player.sendMessage("Projekt " + project.getProjectName() + " wurde geladen.");
 		
 		// check if the copying has been stopped
+		project.toggleMarkers(true);
 		
 	}
 	
@@ -487,15 +578,17 @@ public class BigCopy extends JavaPlugin implements Listener {
 		ItemStack item = player.getItemInHand();
 
 		Project project = this.projects.get(player.getName());
-
-		if (project != null && project.getUser().equalsIgnoreCase(player.getName()) && item != null && item.getType() == Material.GOLD_AXE) {
-			player.sendMessage("id: "+b.getTypeId()+" data: "+b.getData());
-			b.getType().equals(Material.LAVA);
-			event.setCancelled(true);
-		
-		}
 		
 		if (project != null && project.getSelectedPositionType() != PositionType.DEFAULT && project.getUser().equalsIgnoreCase(player.getName()) && item != null && item.getType() == Material.GOLD_AXE) {
+			
+			if (project.getSelectedPositionType() == PositionType.INFO) {
+				if (b == null)
+					return;
+				player.sendMessage("id: "+b.getTypeId()+" data: "+b.getData());
+				event.setCancelled(true);
+				return;
+			}
+			
 			Location loc;
 			if (action == Action.RIGHT_CLICK_AIR) {
 				loc = player.getLocation();
@@ -512,7 +605,6 @@ public class BigCopy extends JavaPlugin implements Listener {
 				project.setPos2(loc);
 				this.checkMarkerCompletion(project);
 			}
-
 			player.sendMessage(project.getSelectedPositionType().toString().toLowerCase() + " wurde ausgewählt.");
 			project.setSelectedPositionType(PositionType.DEFAULT);
 

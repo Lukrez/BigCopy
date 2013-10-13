@@ -19,6 +19,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 public class CopyTask extends BukkitRunnable {
 
 	public String playerName;
+	private Project project;
 	public int X1;
 	public int Y1;
 	public int Z1;
@@ -54,6 +55,8 @@ public class CopyTask extends BukkitRunnable {
 
 	public CopyTask(Project project) {
 		this.world = project.getPos1().getWorld();
+		this.project = project;
+		
 		this.delay = project.getDelay();
 		this.playerName = project.getUser();
 		this.centerX = project.getCopyCenter().getBlockX();
@@ -88,6 +91,7 @@ public class CopyTask extends BukkitRunnable {
 		this.atZ = this.Z1;
 
 		this.copyFinished = false;
+		this.project.setStatus(Status.COPYING);
 		this.copyAbort = false;
 
 		// Calculate size
@@ -116,6 +120,19 @@ public class CopyTask extends BukkitRunnable {
 		
 	}
 	
+	public boolean setStartPosition(int x, int y, int z){
+		if (x < this.X1 || x > this.X2)
+			return false;
+		if (y < this.Y1 || y > this.Y2)
+			return false;
+		if (z < this.Z1 || z > this.Z2)
+			return false;
+		this.atX = x;
+		this.atY = y;
+		this.atZ = y;
+		return true;
+	}
+	
 	public void saveTaskFile(){
 		YamlConfiguration ymlTask = new YamlConfiguration();
 		ymlTask.set("atX",  this.atX);
@@ -128,6 +145,7 @@ public class CopyTask extends BukkitRunnable {
 			out.write(ymlTask.saveToString().getBytes());
 		} catch (IOException e) {
 			this.copyAbort = true;
+			this.project.setCopyStatus(CopyStatus.ERROR_WHILE_COPYING);
 			e.printStackTrace();
 		}
 	}
@@ -208,7 +226,8 @@ public class CopyTask extends BukkitRunnable {
 					this.bw.write(s);
 				} catch (IOException e) {
 					//TODO: fehler in log schreiben 
-					this.copyFinished = true;
+					this.copyAbort = true;
+					this.project.setCopyStatus(CopyStatus.ERROR_WHILE_COPYING);
 					e.printStackTrace();
 				}
 				this.saveTaskFile();
@@ -221,12 +240,16 @@ public class CopyTask extends BukkitRunnable {
 			System.out.println("flushing finished");
 		} catch (IOException e) {
 			this.copyAbort = true;
+			this.project.setCopyStatus(CopyStatus.ERROR_WHILE_COPYING);
 			e.printStackTrace();
 		}
 		sw.stop();
 		System.out.println(sw.getElapsedTime());
 
 		if (this.copyFinished) {
+			this.project.setStatus(Status.FINISHED);
+			this.project.setCopyStatus(CopyStatus.COPYING_FINISHED);
+			
 			this.closeWriter();
 			this.swCopy.stop();
 			System.out.println("Kopiervorgang brauchte: " + this.swCopy.getElapsedTime() + " ms");

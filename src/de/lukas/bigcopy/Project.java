@@ -29,7 +29,8 @@ public class Project {
 	private Location pos2;
 	private Location copyCenter;
 	private Direction copyDirection;
-	private CopyTask cp;
+	private CopyTask copyTask;
+	private PasteTask pasteTask;
 	
 	private PasteStatus pasteStatus;
 	private Location pasteCenter;
@@ -63,7 +64,7 @@ public class Project {
 		this.pos2 = null;
 		this.copyCenter = null;
 		this.copyDirection = Direction.UNDEFINED;
-		this.cp = null;
+		this.copyTask = null;
 		this.pasteStatus = PasteStatus.NONE;
 		this.pasteCenter = null;
 		this.pasteDirection = Direction.UNDEFINED;
@@ -285,17 +286,17 @@ public class Project {
 	}*/
 	
 	public void startNewCopyTask() {
-		this.cp = new CopyTask(this);
+		this.copyTask = new CopyTask(this);
 		this.status = Status.COPYING;
 		this.copyStatus = CopyStatus.COPYING;
 		this.saveConfig();
-		Bukkit.getScheduler().scheduleSyncDelayedTask(BigCopy.getInstance(), this.cp, 60);
+		Bukkit.getScheduler().scheduleSyncDelayedTask(BigCopy.getInstance(), this.copyTask, 60);
 	}
 	
 	public boolean resumeCopyTask(){
-		if (this.cp == null)
+		if (this.copyTask == null)
 			return false;
-		Bukkit.getScheduler().scheduleSyncDelayedTask(BigCopy.getInstance(), this.cp, 60);
+		Bukkit.getScheduler().scheduleSyncDelayedTask(BigCopy.getInstance(), this.copyTask, 60);
 		this.status = Status.COPYING;
 		this.copyStatus = CopyStatus.COPYING;
 		this.saveConfig();
@@ -303,8 +304,8 @@ public class Project {
 	}
 	
 	public void stopCopyTask() {
-		Bukkit.getScheduler().cancelTask(this.cp.getTaskId());
-		this.cp = null;
+		Bukkit.getScheduler().cancelTask(this.copyTask.getTaskId());
+		this.copyTask = null;
 		this.copyStatus = CopyStatus.COPYING_PAUSED;
 		this.saveConfig();
 	}
@@ -317,7 +318,7 @@ public class Project {
 		return this.pasteDirection;
 	}
 	
-	public String getStatus(){
+	public String getInfo(){
 		String s = "";
 		s += "Projectname: "+this.projectName;
 		s += "\nUser: "+this.user;
@@ -344,7 +345,7 @@ public class Project {
 	}
 	
 	public CopyTask getCopyTask(){
-		return this.cp;
+		return this.copyTask;
 	}
 	
 	public void toggleMarkers(boolean status){
@@ -418,21 +419,84 @@ public class Project {
 	}
 	
 	public Location calcPastePosition(Location a){
-		if (this.rotationmatrix == null)
-			return null;
-		// calc copyvector
-		int ax = a.getBlockX()-this.copyCenter.getBlockX();
-		int ay = a.getBlockY()-this.copyCenter.getBlockY();
-		int az = a.getBlockZ()-this.copyCenter.getBlockZ();
-		
-		
-		// calc pastevector
-		int bx = this.pasteCenter.getBlockX()+this.rotationmatrix.getA1()*ax+this.rotationmatrix.getA2()*az;
-		int by = this.pasteCenter.getBlockY()+ay;
-		int bz = this.pasteCenter.getBlockZ()+this.rotationmatrix.getB1()*ax+this.rotationmatrix.getB2()*az;
-		return new Location(a.getWorld(),bx,by,bz);
+		return this.calcPastePosition(a.getWorld(), a.getBlockX(), a.getBlockY(), a.getBlockZ());
 	}
 	
+	
+	public Location calcPastePosition(World w, int x, int y, int z){
+		
+		// calc copyvector
+		int ax = x-this.copyCenter.getBlockX();
+		int ay = y-this.copyCenter.getBlockY();
+		int az = z-this.copyCenter.getBlockZ();
+		
+		return this.calcPastePositionRelative(w, ax, ay, az);
+		
+		
+	}
+	
+	public Location calcPastePositionRelative(World w, int x, int y, int z){
+		if (this.rotationmatrix == null){
+			System.out.println("Keine rotationmatrix");
+			return null;
+		}
+		// calc pastevector
+				int bx = this.pasteCenter.getBlockX()+this.rotationmatrix.getA1()*x+this.rotationmatrix.getA2()*z;
+				int by = this.pasteCenter.getBlockY()+y;
+				int bz = this.pasteCenter.getBlockZ()+this.rotationmatrix.getB1()*x+this.rotationmatrix.getB2()*z;
+				return new Location(w,bx,by,bz);
+	}
+	
+	public void startNewPasteTask() {
+		this.pasteTask = new PasteTask(this);
+		this.status = Status.PASTING;
+		this.pasteStatus = PasteStatus.PASTING;
+		this.saveConfig();
+		Bukkit.getScheduler().scheduleSyncDelayedTask(BigCopy.getInstance(), this.pasteTask, 60);
+	}
+	
+	public boolean resumePasteTask(){
+		/*if (this.pasteTask == null)
+			return false;*/
+		// TODO: Make error checks
+		this.pasteTask = new PasteTask(this);
+		Bukkit.getScheduler().scheduleSyncDelayedTask(BigCopy.getInstance(), this.pasteTask, 60);
+		this.status = Status.PASTING;
+		this.pasteStatus = PasteStatus.PASTING;
+		this.saveConfig();
+		return true;
+	}
+	
+	public void stopPasteTask() {
+		Bukkit.getScheduler().cancelTask(this.copyTask.getTaskId());
+		this.pasteTask = null;
+		this.pasteStatus = PasteStatus.PASTING_PAUSED;
+		this.saveConfig();
+	}
+	
+	public Status getStatus(){
+		return this.status;
+	}
+	
+	public void setStatus(Status status){
+		this.status = status;
+	}
+	
+	public CopyStatus getCopyStatus(){
+		return this.copyStatus;
+	}
+	
+	public void setCopyStatus(CopyStatus copyStatus){
+		this.copyStatus = copyStatus;
+	}
+	
+	public PasteStatus getPasteStatus(){
+		return this.pasteStatus;
+	}
+	
+	public void setPasteStatus(PasteStatus pasteStatus){
+		this.pasteStatus = pasteStatus;
+	}
 	
 	
 }
