@@ -5,9 +5,11 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -133,13 +135,25 @@ public class CopyTask extends BukkitRunnable {
 		return true;
 	}
 	
-	public void saveTaskFile(){
+	
+	/*public void openTaskFileWriter(){
+		try {
+			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(this.taskYml));
+		} catch (FileNotFoundException e) {
+			this.copyAbort = true;
+			this.project.setCopyStatus(CopyStatus.ERROR_WHILE_COPYING);
+			e.printStackTrace();
+		}
+	}
+	
+	public void closeTaskFileWriter(){
 		YamlConfiguration ymlTask = new YamlConfiguration();
 		ymlTask.set("atX",  this.atX);
 		ymlTask.set("atY",  this.atY);
 		ymlTask.set("atZ",  this.atZ);
 		try {
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(this.taskYml));
+			out.write(this.taskYml.toString().getBytes());
 			out.flush();
 			out.close();
 			out.write(ymlTask.saveToString().getBytes());
@@ -148,10 +162,10 @@ public class CopyTask extends BukkitRunnable {
 			this.project.setCopyStatus(CopyStatus.ERROR_WHILE_COPYING);
 			e.printStackTrace();
 		}
-	}
+	}*/
 	
 	
-	public void loadTaskFile(){
+	/*public void openTaskFile(){
 		if (!this.taskYml.exists())
 			return;
 		try {
@@ -164,7 +178,7 @@ public class CopyTask extends BukkitRunnable {
 		} catch (IOException | InvalidConfigurationException e) {
 			e.printStackTrace();
 		}
-	}
+	}*/
 	
 	
 
@@ -222,7 +236,6 @@ public class CopyTask extends BukkitRunnable {
 				s += b.getTypeId() + ":";
 				s += b.getData() + "\n";
 				try {
-					System.out.println("writing "+s.length()+" blocks into file at y"+this.atY);
 					this.bw.write(s);
 				} catch (IOException e) {
 					//TODO: fehler in log schreiben 
@@ -230,19 +243,13 @@ public class CopyTask extends BukkitRunnable {
 					this.project.setCopyStatus(CopyStatus.ERROR_WHILE_COPYING);
 					e.printStackTrace();
 				}
-				this.saveTaskFile();
+				// TODO: Save Progress in taskFile
+				//this.saveTaskFile();
 			}
 		}
 		// write into file
-		try {
-			System.out.println("flushing");
-			this.bw.flush();
-			System.out.println("flushing finished");
-		} catch (IOException e) {
-			this.copyAbort = true;
-			this.project.setCopyStatus(CopyStatus.ERROR_WHILE_COPYING);
-			e.printStackTrace();
-		}
+		this.flushWriter();
+		
 		sw.stop();
 		System.out.println(sw.getElapsedTime());
 
@@ -272,6 +279,9 @@ public class CopyTask extends BukkitRunnable {
 		}
 	}
 	
+	
+	
+	
 	public void openWriter(String name){
 		if (this.writerOpen){
 			System.out.println("A writer is already open");
@@ -282,11 +292,26 @@ public class CopyTask extends BukkitRunnable {
 		try {
 			this.fw = new FileWriter(this.blockFile);
 			System.out.println("new blockfile "+this.blockFile.getAbsolutePath());
+			this.bw = new BufferedWriter(this.fw);
+			this.writerOpen = true;
 		} catch (IOException e) {
+			this.copyAbort = true;
+			this.project.setCopyStatus(CopyStatus.ERROR_WHILE_COPYING);
 			e.printStackTrace();
 		}
-		this.bw = new BufferedWriter(this.fw);
-		this.writerOpen = true;
+
+	}
+	
+	public void flushWriter(){
+		if (!this.writerOpen)
+			return;
+		try {
+			this.bw.flush();
+		} catch (IOException e) {
+			this.copyAbort = true;
+			this.project.setCopyStatus(CopyStatus.ERROR_WHILE_COPYING);
+			e.printStackTrace();
+		}
 	}
 	
 	public void closeWriter(){
@@ -294,19 +319,15 @@ public class CopyTask extends BukkitRunnable {
 			System.out.println("No writer needs closing.");
 			return;
 		}
-		try {
-			System.out.println("flushing");
-			this.bw.flush();
-			System.out.println("flushing finished");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		this.flushWriter();
 		try {
 			this.bw.close();
 			this.fw.close();
 			System.out.println("closing blockfile "+this.blockFile.getAbsolutePath());
 			this.writerOpen = false;
 		} catch (IOException e) {
+			this.copyAbort = true;
+			this.project.setCopyStatus(CopyStatus.ERROR_WHILE_COPYING);
 			e.printStackTrace();
 		}
 	}

@@ -54,6 +54,17 @@ public Direction rotate(){
 	}
 }
 
+public int getNr(){
+	switch(this){
+	case EAST: return 0;
+	case NORTH: return 3;
+	case WEST: return 2;
+	case SOUTH: return 1;
+	default:
+		return 0;
+	}
+}
+
 }
 
 

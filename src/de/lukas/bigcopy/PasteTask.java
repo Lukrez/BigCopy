@@ -9,6 +9,7 @@ import java.io.IOException;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -34,9 +35,6 @@ public class PasteTask extends BukkitRunnable {
 	public int pasteCenterY;
 	public int pasteCenterZ;
 	
-	private int copyCenterX;
-	private int copyCenterY;
-	private int copyCenterZ;
 	
 	//public int pasteAtX;
 	//public int pasteAtY;
@@ -45,10 +43,7 @@ public class PasteTask extends BukkitRunnable {
 	public int logAtY;
 	public int logAtZ;
 	
-	public FileReader fr;
-	public BufferedReader br;
-	//public FileWriter fw;
-	//public BufferedWriter bw;
+
 	public World world;
 	public boolean pasteFinished;
 	public boolean pasteAbort;
@@ -57,13 +52,31 @@ public class PasteTask extends BukkitRunnable {
 	
 	
 	private File copyFolder;
-	private File blocksFolder;
-	private File inventoriesFolder;
-	private File entititesFolder;
+	private File copyBlocksFolder;
+	private File copyInventoriesFolder;
+	private File copyEntititesFolder;
 	
-	private File blockFile;
-	private boolean pastefileExists;
+	private File copyBlockFile;
+	public FileReader copyBlockFileReader;
+	public BufferedReader copyBlockBufferedReader;
+	private boolean copyBlockFileExists;
 
+	
+	private File pasteFolder;
+	private File pasteBlocksFolder;
+	private File pasteInventoriesFolder;
+	private File pasteEntititesFolder;
+	
+	private File pasteBlockFile;
+	public FileWriter pasteBlockFileWriter;
+	public BufferedWriter pasteBlockBufferedWriter;
+	private boolean pasteBlockFileOpen;
+	
+	private boolean makeStone;
+	private boolean groundLayer;
+	
+	private Blockrotation blockrotation;
+	private int rotationtimes;
 
 	public PasteTask(Project project) {
 		this.project = project;
@@ -74,37 +87,41 @@ public class PasteTask extends BukkitRunnable {
 		this.pasteCenterY = project.getPasteCenter().getBlockY();
 		this.pasteCenterZ = project.getPasteCenter().getBlockZ();
 		
-		this.copyCenterX = project.getCopyCenter().getBlockX();
-		this.copyCenterY = project.getCopyCenter().getBlockY();
-		this.copyCenterZ = project.getCopyCenter().getBlockZ();
-		
 		// define positions
+		
+		Location p1 =  project.calcPastePosition(project.getPos1());
+		Location p2 =  project.calcPastePosition(project.getPos2());
+		if (p1 == null || p2  == null){
+			System.out.println("Pasteposition ist null!");
+			return;
+		}
 		int cX1,cX2,cY1,cY2,cZ1,cZ2;
 		
-		if (project.getPos1().getBlockX() < project.getPos2().getBlockX()) {
-			cX1 = project.getPos1().getBlockX();
-			cX2 = project.getPos2().getBlockX();
+		if (p1.getBlockX() < p2.getBlockX()) {
+			cX1 = p1.getBlockX();
+			cX2 = p2.getBlockX();
 		} else {
-			cX1 = project.getPos2().getBlockX();
-			cX2 = project.getPos1().getBlockX();
+			cX1 = p2.getBlockX();
+			cX2 = p1.getBlockX();
 		}
-		if (project.getPos1().getBlockY() < project.getPos2().getBlockY()) {
-			cY1 = project.getPos1().getBlockY();
-			cY2 = project.getPos2().getBlockY();
+		if (p1.getBlockY() < p2.getBlockY()) {
+			cY1 = p1.getBlockY();
+			cY2 = p2.getBlockY();
 		} else {
-			cY1 = project.getPos2().getBlockY();
-			cY2 = project.getPos1().getBlockY();
+			cY1 = p2.getBlockY();
+			cY2 = p1.getBlockY();
 		}
-		if (project.getPos1().getBlockZ() < project.getPos2().getBlockZ()) {
-			cZ1 = project.getPos1().getBlockZ();
-			cZ2 = project.getPos2().getBlockZ();
+		if (p1.getBlockZ() < p2.getBlockZ()) {
+			cZ1 = p1.getBlockZ();
+			cZ2 = p2.getBlockZ();
 		} else {
-			cZ1 = project.getPos2().getBlockZ();
-			cZ2 = project.getPos1().getBlockZ();
+			cZ1 = p2.getBlockZ();
+			cZ2 = p1.getBlockZ();
 		}
 		
-		Location minPaste =  project.calcPastePosition(new Location(this.world, cX1, cY1, cZ1));
-		Location maxPaste =  project.calcPastePosition(new Location(this.world, cX2, cY2, cZ2));
+		
+		Location minPaste =  new Location(this.world, cX1, cY1, cZ1);
+		Location maxPaste =  new Location(this.world, cX2, cY2, cZ2);
 		
 		if (minPaste == null || maxPaste == null){
 			System.out.println("Pasteposition ist null!");
@@ -127,7 +144,7 @@ public class PasteTask extends BukkitRunnable {
 		
 		this.pasteFinished = false;
 		this.pasteAbort = false;
-		this.pastefileExists = false;
+		this.copyBlockFileExists = false;
 		
 		this.copyFolder = project.getCopyFolder();
 		if (!this.copyFolder.exists()){
@@ -135,28 +152,43 @@ public class PasteTask extends BukkitRunnable {
 			this.pasteAbort = true;
 			return;
 		}
-		this.blocksFolder = new File(this.copyFolder,"blocks");
-		if (!this.blocksFolder.exists()){
+		this.copyBlocksFolder = new File(this.copyFolder,"blocks");
+		if (!this.copyBlocksFolder.exists()){
 			System.out.println("Blockordner existiert nicht!");
 			this.pasteAbort = true;
 			return;
 		}
-		this.inventoriesFolder = new File(this.copyFolder,"inventories");
-		if (!this.inventoriesFolder.exists()){
+		this.copyInventoriesFolder = new File(this.copyFolder,"inventories");
+		if (!this.copyInventoriesFolder.exists()){
 			System.out.println("Inventoryordner existiert nicht!");
 			return;
 		}
-		this.entititesFolder = new File(this.copyFolder,"entities");
-		if (!this.entititesFolder.exists()){
+		this.copyEntititesFolder = new File(this.copyFolder,"entities");
+		if (!this.copyEntititesFolder.exists()){
 			System.out.println("Entitiyordner existiert nicht!");
 			this.pasteAbort = true;
 			return;
 		}
 		
+		
+		this.pasteFolder = project.getPasteFolder();
+		this.pasteBlocksFolder = new File(this.pasteFolder,"blocks");
+		if (!this.pasteBlocksFolder.exists()){
+			this.pasteBlocksFolder.mkdir();
+		}
+		this.pasteInventoriesFolder = new File(this.pasteFolder,"inventories");
+		if (!this.pasteInventoriesFolder.exists()){
+			this.pasteInventoriesFolder.mkdir();
+		}
+		this.pasteEntititesFolder = new File(this.pasteFolder,"entities");
+		if (!this.pasteEntititesFolder.exists()){
+			this.pasteEntititesFolder.mkdir();
+		}
+		
 		// check paste file existence
 		for (int y = this.Y1; y <= this.Y2;y++){
 			String name = (y-this.pasteCenterY)+".txt";
-			File yExists = new File(this.blocksFolder,name);
+			File yExists = new File(this.copyBlocksFolder,name);
 			if (!yExists.exists()){
 				System.out.println("Blockfile "+name+" existiert nicht!");
 				this.pasteAbort = true;
@@ -166,10 +198,20 @@ public class PasteTask extends BukkitRunnable {
 		
 		
 
-		this.openPasteReader((this.Y1-this.pasteCenterY)+".txt");
-		this.atY = this.Y1;
-		this.atX = this.X1;
+		this.openCopyBlockReader((this.Y1-this.pasteCenterY)+".txt");
+		this.openPasteBlockWriter(this.Y1+".tx");
+		this.atX = this.X1-1;
+		this.atY = this.Y1-1;
 		this.atZ = this.Z1;
+		
+		this.makeStone = true;
+		this.groundLayer = true;
+		
+		// create blockrotation class
+		this.blockrotation = new Blockrotation();
+		
+		// calulate rotationtimes
+		this.rotationtimes = this.project.getCopyDirection().getNr()-this.project.getPasteDirection().getNr();
 	}
 
 	public String getStatus() {
@@ -197,23 +239,55 @@ public class PasteTask extends BukkitRunnable {
 		while (i < 1000 && !this.pasteFinished && !this.pasteAbort) {
 			i++;
 			
+			if (this.makeStone){
+				this.atX++;
+				if (this.atX > this.X2) {
+					this.atX = this.X1;
+					this.atZ++;
+				}
+				if (this.atZ > this.Z2) {
+					this.atZ = this.Z1;
+					this.atX = this.X1-1;
+					if (this.groundLayer){
+						this.groundLayer = false;
+						this.atY++;
+						this.closePasteBlockWriter();
+						this.openPasteBlockWriter(this.atY+1+".txt");
+					} else {
+						this.makeStone = false;
+					}
+					continue;
+				}
+				if (this.atY < this.Y2){
+					this.removeOriginalBlock(this.atX, this.atY+1, this.atZ);					
+				}
+				continue;
+			}
+			
 			String line = null;
 			try {
-				line = this.br.readLine();
+				line = this.copyBlockBufferedReader.readLine();
 			} catch (IOException e) {
 				e.printStackTrace();
 				this.pasteAbort = true;
 				continue;
 			}
 			if (line == null){
-				this.closePasteReader();
+				this.closeCopyBlockReader();
 				
 				this.atY++;
 				if (this.atY > this.Y2){
 					this.pasteFinished = true;
 					continue;
 				}
-				this.openPasteReader((this.atY-this.pasteCenterY)+".txt");
+				this.openCopyBlockReader((this.atY-this.pasteCenterY)+".txt");
+				if (this.atY < this.Y2){
+					this.atX = this.X1-1;
+					this.atZ = this.Z1;
+					this.makeStone = true;
+					this.closePasteBlockWriter();
+					this.openPasteBlockWriter(this.atY+1+".txt");
+				}
 				continue;
 			}
 			// Read line
@@ -232,10 +306,10 @@ public class PasteTask extends BukkitRunnable {
 
 		}
 		sw.stop();
-		System.out.println(sw.getElapsedTime());
+		//System.out.println(sw.getElapsedTime());
 
 		if (this.pasteFinished) {
-			this.closePasteReader();
+			this.closeCopyBlockReader();
 			this.swCopy.stop();
 			System.out.println("Pastevorgang brauchte: " + this.swCopy.getElapsedTime() + " ms");
 
@@ -244,7 +318,7 @@ public class PasteTask extends BukkitRunnable {
 				player.sendMessage("Pastevorgang erledigt.");
 			}
 		} else if (this.pasteAbort) {
-			this.closePasteReader();
+			this.closeCopyBlockReader();
 			this.swCopy.stop();
 			System.out.println("Pastevorgang abgebrochen: " + this.swCopy.getElapsedTime() + " ms");
 
@@ -259,36 +333,36 @@ public class PasteTask extends BukkitRunnable {
 	}
 	
 	
-	public void openPasteReader(String name){
-		if (this.pastefileExists){
+	public void openCopyBlockReader(String name){
+		if (this.copyBlockFileExists){
 			System.out.println("A paste file is already open!");
 			return;
 		}
 		// open writer
-		this.blockFile = new File(this.blocksFolder,name);
+		this.copyBlockFile = new File(this.copyBlocksFolder,name);
 		try {
-			this.fr = new FileReader(this.blockFile);
-			this.br = new BufferedReader(this.fr);
-			this.pastefileExists = true;
+			this.copyBlockFileReader = new FileReader(this.copyBlockFile);
+			this.copyBlockBufferedReader = new BufferedReader(this.copyBlockFileReader);
+			this.copyBlockFileExists = true;
 		} catch (IOException e) {
-			this.pastefileExists = false;
+			this.copyBlockFileExists = false;
 			e.printStackTrace();
 		}
 
 	}
 
-	public void closePasteReader(){
-		if (!this.pastefileExists){
+	public void closeCopyBlockReader(){
+		if (!this.copyBlockFileExists){
 			System.out.println("No paste file is open!");
 			return;
 		}
 		try {
-			this.br.close();
-			this.fr.close();
+			this.copyBlockBufferedReader.close();
+			this.copyBlockFileReader.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		this.pastefileExists = false;
+		this.copyBlockFileExists = false;
 	}
 	
 	
@@ -300,36 +374,94 @@ public class PasteTask extends BukkitRunnable {
 		Block b = loc.getBlock();
 		if (b == null)
 			return;
+		dataValue = this.blockrotation.getRotatedDataValue(blockId, dataValue, this.rotationtimes);
 		b.setTypeId(blockId);
 		b.setData(dataValue);
 		if (blockId == 0)
 			return;
 	}
 	
-	
-	
-	/*public void openWriter(String name){
-		// open writer
-		File path = new File(BigCopy.getInstance().getDataFolder(),"paste"+File.separator + name);
+	private void removeOriginalBlock(int x, int y, int z){
+		Location loc = new Location(this.world, x, y, z);
+		Block b = loc.getBlock();
+		if (b == null)
+			return;
+		String s = "";
+		s += x + ":";
+		s += y + ":";
+		s += z + ":";
+		
+		s += b.getTypeId() + ":";
+		s += b.getData() + "\n";
+		
 		try {
-			this.fw = new FileWriter(path);
+			this.pasteBlockBufferedWriter.write(s);
 		} catch (IOException e) {
+			//TODO: fehler in log schreiben 
+			this.pasteAbort = true;
+			this.project.setPasteStatus(PasteStatus.ERROR_WHILE_PASTING);
 			e.printStackTrace();
+			return;
 		}
-		this.bw = new BufferedWriter(fw);
+		
+		// set Block to Stone
+		b.setType(Material.STONE);
+		b.setData((byte) 0);
+		
 	}
 	
-	public void closeWriter(){
+	
+
+	
+	public void openPasteBlockWriter(String name){
+		if (this.pasteBlockFileOpen){
+			System.out.println("A writer is already open");
+			return;
+		}
+		// open writer
+		System.out.println("opening pasteBlockWriter: "+name);
+		this.pasteBlockFile = new File(this.pasteBlocksFolder,name);
 		try {
-			this.bw.flush();
+			this.pasteBlockFileWriter = new FileWriter(this.pasteBlockFile);
+			System.out.println("new blockfile "+this.pasteBlockFile.getAbsolutePath());
+			this.pasteBlockBufferedWriter = new BufferedWriter(this.pasteBlockFileWriter);
+			this.pasteBlockFileOpen = true;
 		} catch (IOException e) {
+			this.pasteAbort = true;
+			this.project.setPasteStatus(PasteStatus.ERROR_WHILE_PASTING);
 			e.printStackTrace();
 		}
+	}
+	
+	public void flushPasteBlockWriter(){
+		if (!this.pasteBlockFileOpen)
+			return;
+		System.out.println("flushing pasteBlockWriter: ");
 		try {
-			this.bw.close();
-			this.fw.close();
+			this.pasteBlockBufferedWriter.flush();
 		} catch (IOException e) {
+			this.pasteAbort = true;
+			this.project.setPasteStatus(PasteStatus.ERROR_WHILE_PASTING);
 			e.printStackTrace();
 		}
-	}*/
+	}
+	
+	public void closePasteBlockWriter(){
+		if (!this.pasteBlockFileOpen){
+			System.out.println("No writer needs closing.");
+			return;
+		}
+		this.flushPasteBlockWriter();
+		System.out.println("closing pasteBlockWriter: ");
+		try {
+			this.pasteBlockBufferedWriter.close();
+			this.pasteBlockFileWriter.close();
+			System.out.println("closing blockfile "+this.pasteBlockFile.getAbsolutePath());
+			this.pasteBlockFileOpen = false;
+		} catch (IOException e) {
+			this.pasteAbort = true;
+			this.project.setPasteStatus(PasteStatus.ERROR_WHILE_PASTING);
+			e.printStackTrace();
+		}
+	}
 }

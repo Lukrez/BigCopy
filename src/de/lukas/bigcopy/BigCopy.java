@@ -86,12 +86,12 @@ public class BigCopy extends JavaPlugin implements Listener {
 					player.sendMessage("Bitte Projektname angeben.");
 					return true;
 				}
-
-				String projectName = "";
-				for (int i = 1; i < args.length; i++) {
-					projectName += args[i] + " ";
+				if (args.length > 2) {
+					player.sendMessage("Bitte nur einen Namen angeben.");
+					return true;
 				}
-				this.createProject(projectName, player);
+
+				this.createProject(args[1], player);
 			
 				return true;
 			}
@@ -101,13 +101,12 @@ public class BigCopy extends JavaPlugin implements Listener {
 					player.sendMessage("Bitte Projektname angeben.");
 					return true;
 				}
-
-				String projectName = "";
-				for (int i = 1; i < args.length; i++) {
-					projectName += args[i] + " ";
+				if (args.length > 2) {
+					player.sendMessage("Bitte nur einen Namen angeben.");
+					return true;
 				}
-
-				this.loadProject(projectName, player);
+				
+				this.loadProject(args[1], player);
 
 				return true;
 			}
